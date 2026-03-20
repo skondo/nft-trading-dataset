@@ -1,0 +1,48 @@
+name: nft_research
+channels:
+  - conda-forge
+dependencies:
+  # Core Python
+  - python=3.11
+
+  # Scientific stack
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - pyarrow
+  - protobuf
+
+  # Notebook support
+  - jupyter
+  - jupyterlab
+  - ipykernel
+  - nbformat
+  - nbconvert
+  - nodejs  # JupyterLab extensions
+
+  # LaTeX-related (for table generation)
+  - tabulate
+
+  # Google Cloud / BigQuery (pip)
+  - pip
+  - pip:
+      - bigframes
+      - google-cloud-bigquery
+      - google-cloud-bigquery[pandas]
+      - google-cloud-bigquery-storage
+      - bigquery-magics
+      - google-auth
+      - google-auth-oauthlib
+      - db-dtypes
+      - plotly
+      - ruptures
+      - langdetect
+      - tqdm
+      - nltk
+      - umap-learn
+      - kaleido
+      - scikit_posthocs
+      - python-i18n
