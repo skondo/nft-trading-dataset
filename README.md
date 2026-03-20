@@ -25,7 +25,7 @@ The current Zenodo release contains:
 - `nft_metadata_base.parquet.gz`
 - `README.md`
 
-According to the Zenodo dataset README, `nft_trading_base` includes transaction-level NFT trading data with fields such as `timestamp` (timestamp), `week_start` (date), `market`, `token_type`, `price_eth`, and `fee_eth`, while `nft_metadata_base` includes collection-level metadata-derived variables such as `category`, `confidence`, ERC standard indicators, and royalty information. The ETH/USD reference data used in the paper are not redistributed in the Zenodo archive and must be obtained separately from Etherscan. fileciteturn1file0L1-L20 fileciteturn1file0L21-L43 fileciteturn1file1L1-L24
+According to the Zenodo dataset README, `nft_trading_base` includes transaction-level NFT trading data with fields such as `timestamp` (timestamp), `week_start` (date), `market`, `token_type`, `price_eth`, and `fee_eth`, while `nft_metadata_base` includes collection-level metadata-derived variables such as `category`, `confidence`, ERC standard indicators, and royalty information. The ETH/USD reference data used in the paper are not redistributed in the Zenodo archive and must be obtained separately from Etherscan.
 
 ## Scope of this repository
 
@@ -196,7 +196,7 @@ The target base tables are:
 
 ### 4. Obtain ETH/USD daily exchange-rate data
 
-In the paper, ETH-denominated transaction values were converted into USD using ETH/USD data obtained from Etherscan. The Zenodo README states that these data are not redistributed and should be downloaded directly by users who want to reproduce the USD-denominated analysis. The CSV fields are `Date(UTC)`, `UnixTimeStamp`, and `Value`. fileciteturn1file1L10-L24
+In the paper, ETH-denominated transaction values were converted into USD using ETH/USD data obtained from Etherscan. The Zenodo README states that these data are not redistributed and should be downloaded directly by users who want to reproduce the USD-denominated analysis. The CSV fields are `Date(UTC)`, `UnixTimeStamp`, and `Value`.
 
 Save the file locally as `data/raw/etherprice.csv`, upload it to GCS, and load it into BigQuery as `usd_eth_base`.
 

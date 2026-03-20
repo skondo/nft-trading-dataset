@@ -30,15 +30,15 @@ Update these values before executing the script in the BigQuery editor or from t
 
 ### `nft_trading_base`
 
-The Zenodo dataset README documents the following key columns for this table: `timestamp` (timestamp), `week_start` (date), `market`, `token_type`, `price_eth`, and `fee_eth`, together with transaction identifiers and wallet or collection addresses. fileciteturn1file0L9-L38
+The Zenodo dataset README documents the following key columns for this table: `timestamp` (timestamp), `week_start` (date), `market`, `token_type`, `price_eth`, and `fee_eth`, together with transaction identifiers and wallet or collection addresses.
 
 ### `nft_metadata_base`
 
-The Zenodo dataset README documents collection-level metadata fields including `category_pred`, `confidence`, `category`, social-link indicators, ERC standard indicators, and `royalty_fee_percent`. fileciteturn1file0L44-L62 fileciteturn1file1L1-L9
+The Zenodo dataset README documents collection-level metadata fields including `category_pred`, `confidence`, `category`, social-link indicators, ERC standard indicators, and `royalty_fee_percent`.
 
 ### `usd_eth_base`
 
-The ETH/USD CSV is expected to originate from Etherscan and include the fields `Date(UTC)`, `UnixTimeStamp`, and `Value`. fileciteturn1file1L10-L24
+The ETH/USD CSV is expected to originate from Etherscan and include the fields `Date(UTC)`, `UnixTimeStamp`, and `Value`.
 
 ## Derived table notes
 
