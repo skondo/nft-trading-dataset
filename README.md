@@ -16,8 +16,8 @@ The intended execution environment is **VS Code Notebook (Python)** with access 
 
 Primary dataset release:
 
-- Zenodo record: `https://zenodo.org/records/19111864`
-- DOI: `10.5281/zenodo.19111864`
+- Zenodo record: `https://zenodo.org/records/19062204`
+- DOI: `10.5281/zenodo.19062204`
 
 The current Zenodo release contains:
 
