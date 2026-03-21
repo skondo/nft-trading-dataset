@@ -7,7 +7,8 @@ The repository starts from the public processed dataset published on Zenodo and 
 - download the released dataset files,
 - upload them to Google Cloud Storage (GCS),
 - load them into BigQuery base tables,
-- ingest daily ETH/USD exchange-rate data from Etherscan,
+- ingest ETH/USD exchange-rate data from Etherscan,
+- normalize the raw ETH/USD CSV into a reusable base table, and
 - construct the prepared transaction tables used in the study.
 
 The intended execution environment is **VS Code Notebook (Python)** with access to Google Cloud resources.
@@ -16,8 +17,8 @@ The intended execution environment is **VS Code Notebook (Python)** with access 
 
 Primary dataset release:
 
-- Zenodo record: `https://zenodo.org/records/19062204`
-- DOI: `10.5281/zenodo.19062204`
+- Zenodo record: `https://zenodo.org/records/19111864`
+- DOI: `10.5281/zenodo.19111864`
 
 The current Zenodo release contains:
 
@@ -34,11 +35,13 @@ This repository covers **data preparation and setup only**.
 It includes:
 
 - operational prerequisites for using GCS and BigQuery from VS Code Notebook,
+- environment setup guidance using `environment.yml`,
 - upload and load procedures for the Zenodo dataset,
-- a simple procedure for obtaining ETH/USD daily price data,
+- a simple procedure for obtaining ETH/USD price data from Etherscan,
 - construction of the following BigQuery tables:
   - `nft_trading_base`
   - `nft_metadata_base`
+  - `usd_eth_raw`
   - `usd_eth_base`
   - `nft_trading_usd`
   - `nft_trading_usd_prefilter`
@@ -46,7 +49,7 @@ It includes:
 
 It does **not** cover:
 
-- Python environment creation,
+- general Python, Conda, or VS Code installation,
 - downstream modeling and estimation,
 - regression or factor-model notebooks,
 - visualization workflows,
@@ -56,10 +59,10 @@ It does **not** cover:
 
 ```text
 .
+├── .gitignore
 ├── README.md
 ├── environment.yml
 ├── requirements.txt
-├── .gitignore
 ├── data/
 │   ├── raw/
 │   │   └── .gitkeep
@@ -68,13 +71,12 @@ It does **not** cover:
 ├── notebooks/
 │   └── data_preparation.ipynb
 └── sql/
+    ├── 00_create_usd_eth_base.sql
     ├── 01_create_nft_trading_usd.sql
     ├── 02_create_nft_trading_usd_prefilter.sql
     ├── 03_create_nft_trading_usd_filtered.sql
     └── table_definitions.md
 ```
-
-The `data/` subdirectories are included only as local working locations for downloaded and extracted source files. The `.gitignore` keeps large raw data artifacts out of version control while preserving the folder structure expected by the notebook.
 
 ## Prerequisites
 
@@ -90,11 +92,11 @@ You should have the following prepared in advance.
 - a target GCS bucket,
 - a target BigQuery dataset.
 
-Recommended example names:
+Recommended placeholders:
 
-- GCP project: `your-gcp-project`
-- GCS bucket: `gs://your-bucket`
-- BigQuery dataset: `your_dataset`
+- GCP project: `<YOUR_GCP_PROJECT_ID>`
+- GCS bucket: `gs://<YOUR_GCS_BUCKET>`
+- BigQuery dataset: `<YOUR_BIGQUERY_DATASET>`
 
 ### Local tools
 
@@ -103,7 +105,19 @@ The notebook assumes that the following tools are available on your machine:
 - `gcloud`
 - `gcloud storage` or `gsutil`
 - `bq`
-- VS Code with Notebook support
+- VS Code with the Python and Jupyter extensions
+
+### Environment setup
+
+The recommended execution environment is defined in `environment.yml`.
+
+```bash
+conda env create -f environment.yml
+conda activate nft_research
+python -m ipykernel install --user --name nft_research --display-name "Python (nft_research)"
+```
+
+Open `notebooks/data_preparation.ipynb` in VS Code and select the `Python (nft_research)` kernel.
 
 ### Authentication
 
@@ -111,7 +125,7 @@ Before running notebook cells that interact with GCP, authenticate locally.
 
 ```bash
 gcloud auth login
-gcloud config set project your-gcp-project
+gcloud config set project <YOUR_GCP_PROJECT_ID>
 gcloud auth application-default login
 ```
 
@@ -123,21 +137,37 @@ gcloud config get-value project
 
 The notebook uses Application Default Credentials through the Google Cloud Python client libraries.
 
-## Environment setup
 
-This repository does not document general Python or VS Code installation. Instead, it provides the minimum reproducible environment definition needed to run the notebook locally.
+## Configuration parameters
 
-The recommended execution environment is defined in `environment.yml`.
+The notebook and SQL files are designed so that environment-specific identifiers and reusable thresholds are defined once and then referenced throughout the workflow.
 
-```bash
-conda env create -f environment.yml
-conda activate nft_research
-python -m ipykernel install --user --name nft_research --display-name "Python (nft_research)"
-```
+Recommended configuration variables:
 
-After creating the environment, open `notebooks/data_preparation.ipynb` in VS Code and select the `Python (nft_research)` kernel.
+- `PROJECT_ID`
+- `DATASET_ID`
+- `BUCKET_NAME`
+- `GCS_RAW_PREFIX`
+- `ANALYSIS_START_DATE`
+- `ANALYSIS_END_DATE`
+- `GLOBAL_MAX_PRICE_USD`
+- `MIN_ACTIVE_WEEKS`
+- `LOCAL_PRICE_QUANTILE_RESOLUTION`
+- `LOCAL_PRICE_QUANTILE_OFFSET`
 
-A lightweight `requirements.txt` is also included for users who prefer a pip-based setup, although the Conda environment is the recommended option for reproducibility.
+This makes it easier to:
+
+- move the workflow across GCP projects or datasets,
+- change storage prefixes without editing multiple cells,
+- extend the study period later, and
+- revise filtering thresholds in a single place.
+
+## Python dependencies
+
+`environment.yml` is the recommended environment definition for reproducibility.  
+`requirements.txt` is provided as a lightweight pip-oriented reference.
+
+Typical pip installation:
 
 ```bash
 pip install -r requirements.txt
@@ -177,9 +207,9 @@ tar -xzf data/raw/nft_trading_base.tar.gz -C data/extracted/
 Example commands:
 
 ```bash
-gcloud storage cp data/raw/nft_metadata_base.parquet.gz gs://your-bucket/nft_market_regimes/raw/
-gcloud storage cp data/raw/etherprice.csv gs://your-bucket/nft_market_regimes/raw/
-gcloud storage cp --recursive data/extracted/nft_trading_base gs://your-bucket/nft_market_regimes/raw/nft_trading_base/
+gcloud storage cp data/raw/nft_metadata_base.parquet.gz gs://<YOUR_GCS_BUCKET>/nft_market_regimes/raw/
+gcloud storage cp data/raw/etherprice.csv gs://<YOUR_GCS_BUCKET>/nft_market_regimes/raw/
+gcloud storage cp --recursive data/extracted/nft_trading_base gs://<YOUR_GCS_BUCKET>/nft_market_regimes/raw/nft_trading_base/
 ```
 
 If the extracted trading archive contains many Parquet parts, upload the extracted directory rather than the compressed archive.
@@ -188,33 +218,64 @@ If the extracted trading archive contains many Parquet parts, upload the extract
 
 The notebook shows a Python-based loading approach and includes notes for CLI-oriented users.
 
-The target base tables are:
+The target loaded tables are:
 
-- `your_dataset.nft_trading_base`
-- `your_dataset.nft_metadata_base`
-- `your_dataset.usd_eth_base`
+- `<YOUR_GCP_PROJECT_ID>.<YOUR_BIGQUERY_DATASET>.nft_trading_base`
+- `<YOUR_GCP_PROJECT_ID>.<YOUR_BIGQUERY_DATASET>.nft_metadata_base`
+- `<YOUR_GCP_PROJECT_ID>.<YOUR_BIGQUERY_DATASET>.usd_eth_raw`
 
-### 4. Obtain ETH/USD daily exchange-rate data
+The raw ETH/USD CSV is first loaded into `usd_eth_raw`, then normalized into `usd_eth_base`.
 
-In the paper, ETH-denominated transaction values were converted into USD using ETH/USD data obtained from Etherscan. The Zenodo README states that these data are not redistributed and should be downloaded directly by users who want to reproduce the USD-denominated analysis. The CSV fields are `Date(UTC)`, `UnixTimeStamp`, and `Value`.
+### 4. Obtain ETH/USD exchange-rate data
 
-Save the file locally as `data/raw/etherprice.csv`, upload it to GCS, and load it into BigQuery as `usd_eth_base`.
+Download the CSV from Etherscan and save it locally as `data/raw/etherprice.csv`.
+
+The raw CSV fields are expected to include:
+
+- `Date(UTC)`
+- `UnixTimeStamp`
+- `Value`
+
+Upload the CSV to GCS and load it into BigQuery as `usd_eth_raw`.
+
+Example CLI loading command:
+
+```bash
+bq load \
+  --source_format=CSV \
+  --skip_leading_rows=1 \
+  --autodetect \
+  <YOUR_GCP_PROJECT_ID>:<YOUR_BIGQUERY_DATASET>.usd_eth_raw \
+  gs://<YOUR_GCS_BUCKET>/nft_market_regimes/raw/etherprice.csv
+```
+
+Then create the normalized table `usd_eth_base` from `usd_eth_raw`.
+The normalization step produces:
+
+- `timestamp`
+- `date`
+- `week_start`
+- `usd_eth_rate`
+
+and keeps only rows within the configured analysis period defined by `ANALYSIS_START_DATE` and `ANALYSIS_END_DATE`.
 
 ### 5. Create derived analysis tables
 
 After the base tables are ready, create:
 
+- `usd_eth_base`
 - `nft_trading_usd`
 - `nft_trading_usd_prefilter`
 - `nft_trading_usd_filtered`
 
-In this repository, the reusable SQL for derived tables is provided under `sql/` as separate scripts.
+In this repository:
 
-- `sql/01_create_nft_trading_usd.sql`
-- `sql/02_create_nft_trading_usd_prefilter.sql`
-- `sql/03_create_nft_trading_usd_filtered.sql`
+- `usd_eth_base` is created from `usd_eth_raw`,
+- `nft_trading_usd` is built by joining `nft_trading_base.timestamp` to `usd_eth_base` on `DATE(timestamp) = date`,
+- `nft_trading_usd_prefilter` removes collection-level and global price outliers using configurable `price_usd` thresholds,
+- `nft_trading_usd_filtered` retains only collections observed in at least `MIN_ACTIVE_WEEKS` active weeks.
 
-`nft_trading_usd` is built by joining `nft_trading_base.timestamp` to `usd_eth_base` on `DATE(timestamp)` and multiplying `price_eth` by the daily ETH/USD rate. `nft_trading_usd_prefilter` applies collection-level and global outlier filtering on `price_usd`. `nft_trading_usd_filtered` retains only collections observed in at least 8 active weeks.
+Reusable SQL files are included under `sql/`.
 
 ## Target tables
 
@@ -226,24 +287,28 @@ Base NFT trading table loaded from the public Zenodo release.
 
 Base metadata-derived table loaded from the public Zenodo release.
 
+### `usd_eth_raw`
+
+Raw ETH/USD CSV imported from Etherscan.
+
 ### `usd_eth_base`
 
-Daily ETH/USD exchange-rate table used to convert native ETH prices into USD-denominated values.
+Normalized ETH/USD reference table derived from `usd_eth_raw` with standardized timestamp/date fields.
 
 ### `nft_trading_usd`
 
-Trading table enriched with the daily ETH/USD conversion, including `eth_usd_rate`, `price_usd`, and `fee_usd`.
+Trading table enriched with the daily ETH/USD conversion, including `usd_eth_rate`, `price_usd`, and `fee_usd`.
 
 ### `nft_trading_usd_prefilter`
 
-Intermediate table after USD conversion and outlier filtering. Rows are retained only when `price_usd` is at or below both the collection-specific 99.9th percentile and the global cap of USD 5,000,000.
+Intermediate transaction table after outlier filtering based on collection-level `price_usd` cutoffs and a global upper bound.
 
 ### `nft_trading_usd_filtered`
 
-Filtered analysis table used as the prepared transaction-level source for downstream analysis. Only collections observed in at least 8 active weeks are retained.
+Filtered analysis table retaining only collections observed in at least 8 active weeks.
 
 ## Notes
 
-- The notebook assumes that `nft_trading_base.timestamp` is a timestamp column with time information and that the ETH/USD file is daily. The join therefore uses `DATE(timestamp)`.
+- The notebook assumes that `nft_trading_base.timestamp` is a timestamp column with time information and that the ETH/USD CSV contains Unix-time values that can be converted into a normalized timestamp/date table.
 - If your uploaded `nft_metadata_base` object remains gzip-compressed in GCS, decompress it locally before loading or verify that your BigQuery loading path handles the uploaded object correctly.
-- Inspect the loaded schemas in BigQuery and confirm table partitioning and clustering choices before adapting the SQL scripts for production use.
+- Before promoting the SQL into reusable scripts, inspect the loaded schemas in BigQuery and confirm table partitioning and clustering choices.
