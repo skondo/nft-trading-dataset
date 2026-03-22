@@ -1,20 +1,20 @@
--- Replace the project and dataset placeholders before execution.
-DECLARE project_id STRING DEFAULT '<YOUR_GCP_PROJECT_ID>';
-DECLARE dataset_id STRING DEFAULT '<YOUR_BIGQUERY_DATASET>';
-DECLARE analysis_start_date DATE DEFAULT DATE('2017-10-19');
-DECLARE analysis_end_date DATE DEFAULT DATE('2025-04-01');
+-- Normalize the raw Etherscan CSV into the base ETH/USD reference table.
+
+DECLARE PROJECT_ID STRING DEFAULT '<YOUR_GCP_PROJECT_ID>';
+DECLARE DATASET_ID STRING DEFAULT '<YOUR_BIGQUERY_DATASET>';
+DECLARE ANALYSIS_START_DATE DATE DEFAULT DATE('2017-10-19');
+DECLARE ANALYSIS_END_DATE DATE DEFAULT DATE('2025-04-01');
 
 EXECUTE IMMEDIATE FORMAT("""
 CREATE OR REPLACE TABLE `%s.%s.usd_eth_base` AS
 SELECT
-  TIMESTAMP_SECONDS(CAST(UnixTimeStamp AS INT64)) AS timestamp,
-  DATE(TIMESTAMP_SECONDS(CAST(UnixTimeStamp AS INT64))) AS date,
-  DATE_TRUNC(DATE(TIMESTAMP_SECONDS(CAST(UnixTimeStamp AS INT64))), WEEK(MONDAY)) AS week_start,
-  CAST(Value AS FLOAT64) AS usd_eth_rate
+  unix_time AS timestamp,
+  DATE(unix_time) AS date,
+  DATE_TRUNC(DATE(unix_time), WEEK(MONDAY)) AS week_start,
+  usd_eth_rate
 FROM `%s.%s.usd_eth_raw`
-WHERE TIMESTAMP_SECONDS(CAST(UnixTimeStamp AS INT64)) >= TIMESTAMP(@analysis_start_date, 'UTC')
-  AND TIMESTAMP_SECONDS(CAST(UnixTimeStamp AS INT64)) < TIMESTAMP(@analysis_end_date, 'UTC')
+WHERE unix_time >= TIMESTAMP(@start_date, 'UTC')
+  AND unix_time < TIMESTAMP(@end_date, 'UTC')
 ORDER BY timestamp
-""", project_id, dataset_id, project_id, dataset_id)
-USING analysis_start_date AS analysis_start_date,
-      analysis_end_date AS analysis_end_date;
+""", PROJECT_ID, DATASET_ID, PROJECT_ID, DATASET_ID)
+USING ANALYSIS_START_DATE AS start_date, ANALYSIS_END_DATE AS end_date;
