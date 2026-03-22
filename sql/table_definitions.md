@@ -1,31 +1,25 @@
-# Table Definitions and Build Order
+# Table definitions
 
-This file summarizes the intended build order documented in the notebooks and SQL scripts.
+## Base tables
+- `nft_trading_base`: transaction-level NFT trading records loaded from Zenodo.
+- `nft_metadata_base`: collection-level metadata loaded from Zenodo.
+- `usd_eth_raw`: raw Etherscan ETH/USD CSV loaded into BigQuery.
+- `usd_eth_base`: normalized daily ETH/USD table derived from `usd_eth_raw`.
 
-## Base and prepared transaction tables
+## Prepared transaction tables
+- `nft_trading_usd`: transaction table with USD-converted price and fee fields.
+- `nft_trading_usd_prefilter`: prefiltered version of `nft_trading_usd` after local and global outlier removal.
+- `nft_trading_usd_filtered`: filtered version that retains collections with at least the configured number of active weeks.
 
-1. `nft_trading_base`
-2. `nft_metadata_base`
-3. `usd_eth_raw`
-4. `usd_eth_base`
-5. `nft_trading_usd`
-6. `nft_trading_usd_prefilter`
-7. `nft_trading_usd_filtered`
+## Regime table
+- `regime_labels`: weekly regime labels (`pre-boom`, `boom`, `post-boom`).
 
-## Regime analysis outputs
+## Factor-model tables
+- `weekly_collection_panel_filtered`: collection-week panel with median price, total volume, and transaction count.
+- `weekly_returns_vw`: collection-level weekly NFT return together with market and FX returns.
+- `beta_alpha_estimates`: full-period HAC-robust two-factor estimates.
+- `beta_alpha_estimates_by_regime`: regime-wise HAC-robust two-factor estimates.
 
-8. `regime_labels`
-
-## SQL scripts
-
-- `sql/00_create_usd_eth_base.sql`
-- `sql/01_create_nft_trading_usd.sql`
-- `sql/02_create_nft_trading_usd_prefilter.sql`
-- `sql/03_create_nft_trading_usd_filtered.sql`
-- `sql/10_create_regime_labels.sql`
-
-## Notes
-
-- Load the Etherscan CSV into `usd_eth_raw` first, then build `usd_eth_base`.
-- `regime_labels` depends on changepoint boundaries selected from the regime-detection notebook.
-- Review partitioning and clustering choices before adapting the SQL scripts for production use.
+## Clustering tables
+- `clustering_master`: collection-level structural feature table built directly from public source tables using CTEs.
+- `clustering_result`: final clustering output with `collection`, `cluster`, and `distance_to_centroid`.

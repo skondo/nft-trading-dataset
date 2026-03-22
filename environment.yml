@@ -9,6 +9,7 @@ dependencies:
   - numpy
   - pandas
   - scipy
+  - statsmodels
   - matplotlib
   - seaborn
   - scikit-learn
@@ -45,5 +46,4 @@ dependencies:
       - umap-learn
       - kaleido
       - scikit_posthocs
-      - statsmodels
       - python-i18n
