@@ -10,3 +10,4 @@ ipykernel>=6.29.0
 notebook>=7.0.0
 matplotlib>=3.8.0
 ruptures>=1.1.9
+statsmodels>=0.14.0

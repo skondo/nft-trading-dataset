@@ -45,4 +45,5 @@ dependencies:
       - umap-learn
       - kaleido
       - scikit_posthocs
+      - statsmodels
       - python-i18n

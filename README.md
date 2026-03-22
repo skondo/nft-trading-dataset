@@ -1,6 +1,6 @@
-# NFT Trading Dataset: Data Preparation, Setup, and Regime Detection
+# NFT Trading Dataset: Data Preparation, Regime Detection, and Two-Factor Estimation
 
-This repository provides documentation and executable notebook workflows for rebuilding the analysis-ready BigQuery tables used in the study from the publicly released dataset on Zenodo and for reproducing the changepoint-based regime labeling workflow.
+This repository provides documentation and executable notebook workflows for rebuilding the analysis-ready BigQuery tables used in the study from the publicly released dataset on Zenodo and for reproducing the changepoint-based regime labeling workflow and the two-factor estimation pipeline used in downstream analysis.
 
 The repository starts from the public processed dataset published on Zenodo and describes how to:
 
@@ -10,7 +10,9 @@ The repository starts from the public processed dataset published on Zenodo and 
 - ingest daily ETH/USD exchange-rate data from Etherscan,
 - construct the prepared transaction tables used in the study,
 - detect changepoints from weekly market series,
-- create the `regime_labels` table used in downstream analysis.
+- create the `regime_labels` table used in downstream analysis,
+- construct weekly collection-level return panels, and
+- estimate collection-level alpha and two betas (market and FX) for the full sample and by regime.
 
 The intended execution environment is **VS Code Notebook (Python)** with access to Google Cloud resources.
 
@@ -31,7 +33,7 @@ According to the Zenodo dataset README, `nft_trading_base` includes transaction-
 
 ## Scope of this repository
 
-This repository covers **data preparation and regime labeling**.
+This repository covers **data preparation, regime labeling, and the minimal two-factor estimation pipeline**.
 
 It includes:
 
@@ -47,15 +49,19 @@ It includes:
   - `nft_trading_usd_prefilter`
   - `nft_trading_usd_filtered`
 - changepoint detection from weekly market series,
-- creation of the following analytics table:
+- creation of the following analytics tables:
   - `regime_labels`
+  - `weekly_collection_panel_filtered`
+  - `weekly_returns_vw`
+  - `beta_alpha_estimates`
+  - `beta_alpha_estimates_by_regime`
 
 It does **not** cover:
 
 - raw blockchain extraction pipelines,
 - the broader econometric modeling workflow,
-- regression or factor-model notebooks,
-- the full visualization pipeline used in the paper.
+- the full visualization pipeline used in the paper,
+- broader downstream cross-sectional analysis beyond the minimal two-factor estimation workflow.
 
 ## Repository structure
 
@@ -72,17 +78,39 @@ It does **not** cover:
 │       └── .gitkeep
 ├── notebooks/
 │   ├── data_preparation.ipynb
-│   └── regime_detection.ipynb
+│   ├── regime_detection.ipynb
+│   ├── factor_model_preparation.ipynb
+│   └── factor_model_estimation.ipynb
+├── references/
+│   └── factor_model_reference.py
 └── sql/
     ├── 00_create_usd_eth_base.sql
     ├── 01_create_nft_trading_usd.sql
     ├── 02_create_nft_trading_usd_prefilter.sql
     ├── 03_create_nft_trading_usd_filtered.sql
     ├── 10_create_regime_labels.sql
+    ├── 20_create_weekly_collection_panel_filtered.sql
+    ├── 21_create_weekly_returns_vw.sql
     └── table_definitions.md
 ```
 
 The `data/` subdirectories are included only as local working locations for downloaded and extracted source files. The `.gitignore` keeps large raw data artifacts out of version control while preserving the folder structure expected by the notebooks.
+
+## Factor-model workflow
+
+The factor-model portion of the repository follows a minimal public pipeline:
+
+1. Build `weekly_collection_panel_filtered` from `nft_trading_usd_filtered`.
+2. Build `weekly_returns_vw`, which combines:
+   - collection-level weekly NFT returns,
+   - a value-weighted weekly market return, and
+   - a weekly FX return derived from `usd_eth_base`.
+3. Join `weekly_returns_vw` with `regime_labels` at estimation time.
+4. Estimate and save:
+   - `beta_alpha_estimates`
+   - `beta_alpha_estimates_by_regime`
+
+The minimal public version does **not** create a separate residual table or a separate `weekly_factor_input_vw` table.
 
 ## Prerequisites
 
