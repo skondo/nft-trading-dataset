@@ -1,68 +1,51 @@
-# NFT Trading Dataset: Data Preparation, Regime Detection, Factor Estimation, and Clustering
+# NFT Trading Dataset Reproducibility Pipeline
 
-This repository documents a reproducible public-data workflow for rebuilding the analysis-ready BigQuery tables used in the study from the publicly released Zenodo dataset, generating regime labels from weekly market series, estimating a minimal two-factor model, and constructing collection-level clustering outputs.
+This repository provides a minimal reproducible pipeline built on the public NFT dataset released on Zenodo.
 
-The repository starts from the public processed dataset published on Zenodo and describes how to:
+Using the public source files and Google Cloud services, the repository reproduces the following analytical workflow:
 
-- download the released dataset files,
-- upload them to Google Cloud Storage (GCS),
-- load them into BigQuery base tables,
-- ingest daily ETH/USD exchange-rate data from Etherscan,
-- construct the prepared transaction tables used in the study,
-- detect changepoints from weekly market series and create `regime_labels`,
-- estimate full-period and regime-wise two-factor parameters,
-- build collection-level structural clustering inputs and clustering labels.
+1. public data ingestion and preparation
+2. regime label construction
+3. two-factor return estimation
+4. collection-level clustering
+5. cross-model comparison across category labels, clustering labels, and factor estimates
 
-The intended execution environment is **VS Code Notebook (Python)** with access to Google Cloud resources.
+The repository is designed to support reproducibility of the main analytical workflow based on the public dataset. Some manuscript-specific exploratory analyses, figure styling utilities, and private or internal datasets are intentionally excluded.
 
-## Source dataset
+---
 
-Primary dataset release:
+## Public data source
 
-- Zenodo record: `https://zenodo.org/records/19111864`
-- DOI: `10.5281/zenodo.19111864`
+The analysis starts from the public dataset published on Zenodo.
 
-The current Zenodo release contains:
+- Zenodo record: `10.5281/zenodo.19111864`
+- Public source files include:
+  - `nft_trading_base.tar.gz`
+  - `nft_metadata_base.parquet.gz`
 
-- `nft_trading_base.tar.gz`
-- `nft_metadata_base.parquet.gz`
-- `README.md`
+In addition, ETH/USD reference data is downloaded separately from Etherscan as a CSV file and incorporated into the BigQuery workflow.
 
-According to the Zenodo dataset README, `nft_trading_base` includes transaction-level NFT trading data with fields such as `timestamp` (timestamp), `week_start` (date), `market`, `token_type`, `price_eth`, and `fee_eth`, while `nft_metadata_base` includes collection-level metadata-derived variables such as category-related fields, ERC standard indicators, and royalty information. The ETH/USD reference data used in the paper are not redistributed in the Zenodo archive and must be obtained separately from Etherscan.
+---
 
-## Scope of this repository
+## Scope
 
-This repository covers **data preparation, regime labeling, the minimal two-factor estimation workflow, and the clustering workflow**.
+This repository provides a minimal reproducible workflow for:
 
-It includes:
+- loading the public NFT dataset into Google Cloud Storage and BigQuery
+- preparing trade-level and metadata-based analysis tables
+- constructing regime labels from weekly market series
+- estimating a two-factor model at the collection level
+- generating collection-level clustering labels
+- comparing category labels, clustering labels, and factor-model outputs
 
-- operational prerequisites for using GCS and BigQuery from VS Code Notebook,
-- upload and load procedures for the Zenodo dataset,
-- a simple procedure for obtaining ETH/USD daily price data,
-- construction of the following BigQuery tables:
-  - `nft_trading_base`
-  - `nft_metadata_base`
-  - `usd_eth_raw`
-  - `usd_eth_base`
-  - `nft_trading_usd`
-  - `nft_trading_usd_prefilter`
-  - `nft_trading_usd_filtered`
-- changepoint detection from weekly market series,
-- creation of the following analytics tables:
-  - `regime_labels`
-  - `weekly_collection_panel_filtered`
-  - `weekly_returns_vw`
-  - `beta_alpha_estimates`
-  - `beta_alpha_estimates_by_regime`
-  - `clustering_master`
-  - `clustering_result`
+This repository does **not** include:
 
-It does **not** cover:
+- private or internal datasets
+- non-public annotations or manually curated labels outside the public dataset
+- manuscript-specific LaTeX export utilities used only for paper production
+- exploratory code paths that are not required for the minimal reproducible workflow
 
-- raw blockchain extraction pipelines,
-- the broader visualization pipeline used in the paper,
-- non-public internal data sources,
-- cross-model evaluation beyond the foundational tables produced here.
+---
 
 ## Repository structure
 
@@ -72,85 +55,46 @@ It does **not** cover:
 ├── environment.yml
 ├── requirements.txt
 ├── .gitignore
-├── LICENSE
 ├── data/
 │   ├── raw/
-│   │   └── .gitkeep
 │   └── extracted/
-│       └── .gitkeep
 ├── notebooks/
 │   ├── data_preparation.ipynb
 │   ├── regime_detection.ipynb
 │   ├── factor_model_preparation.ipynb
 │   ├── factor_model_estimation.ipynb
 │   ├── clustering_preparation.ipynb
-│   └── clustering_modeling.ipynb
-├── references/
-│   └── factor_model_reference.py
-└── sql/
-    ├── 00_create_usd_eth_base.sql
-    ├── 01_create_nft_trading_usd.sql
-    ├── 02_create_nft_trading_usd_prefilter.sql
-    ├── 03_create_nft_trading_usd_filtered.sql
-    ├── 10_create_regime_labels.sql
-    ├── 20_create_weekly_collection_panel_filtered.sql
-    ├── 21_create_weekly_returns_vw.sql
-    ├── 30_create_clustering_master.sql
-    └── table_definitions.md
+│   ├── clustering_modeling.ipynb
+│   └── cross_model_evaluation.ipynb
+├── sql/
+│   ├── 00_create_usd_eth_base.sql
+│   ├── 01_create_nft_trading_usd.sql
+│   ├── 02_create_nft_trading_usd_prefilter.sql
+│   ├── 03_create_nft_trading_usd_filtered.sql
+│   ├── 10_create_regime_labels.sql
+│   ├── 20_create_weekly_collection_panel_filtered.sql
+│   ├── 21_create_weekly_returns_vw.sql
+│   ├── 30_create_clustering_master.sql
+│   └── table_definitions.md
+└── references/
+    └── factor_model_reference.py
 ```
 
-The `data/` subdirectories are included only as local working locations for downloaded and extracted source files. The `.gitignore` keeps large raw data artifacts out of version control while preserving the folder structure expected by the notebooks.
-
-## Prerequisites
-
-### Google Cloud
-
-You should have the following prepared in advance:
-
-- a GCP project,
-- billing enabled,
-- permission to use Google Cloud Storage and BigQuery,
-- a target GCS bucket,
-- a target BigQuery dataset for base tables,
-- a target BigQuery dataset for analytics outputs.
-
-Recommended example names:
-
-- GCP project: `your-gcp-project`
-- GCS bucket: `gs://your-bucket`
-- BigQuery base dataset: `base`
-- BigQuery analytics dataset: `analytics`
-
-### Local tools
-
-The notebooks assume that the following tools are available on your machine:
-
-- `gcloud`
-- `gcloud storage` or `gsutil`
-- `bq`
-- VS Code with Notebook support
-
-### Authentication
-
-Before running notebook cells that interact with GCP, authenticate locally.
-
-```bash
-gcloud auth login
-gcloud config set project <YOUR_GCP_PROJECT_ID>
-gcloud auth application-default login
-```
-
-To confirm the active project:
-
-```bash
-gcloud config get-value project
-```
-
-The notebooks use Application Default Credentials through the Google Cloud Python client libraries.
+---
 
 ## Environment setup
 
-This repository does not document general Python or VS Code installation. Instead, it provides the minimum reproducible environment definition needed to run the notebooks locally.
+This repository assumes a local notebook workflow in VSCode with access to Google Cloud services.
+
+### Prerequisites
+
+- a Google Cloud project with BigQuery enabled
+- a Google Cloud Storage bucket
+- Google Cloud CLI (`gcloud`)
+- Conda or Miniforge
+- VSCode with the Python and Jupyter extensions installed
+
+### Recommended Python environment
 
 The recommended execution environment is defined in `environment.yml`.
 
@@ -160,19 +104,37 @@ conda activate nft_research
 python -m ipykernel install --user --name nft_research --display-name "Python (nft_research)"
 ```
 
-After creating the environment, open the notebooks in VS Code and select the `Python (nft_research)` kernel.
+After creating the environment, open the notebooks in VSCode and select the `Python (nft_research)` kernel.
 
-A lightweight `requirements.txt` is also included for users who prefer a pip-based setup, although the Conda environment is the recommended option for reproducibility.
+### Optional pip-based installation
+
+A minimal pip-based dependency list is also provided.
 
 ```bash
 pip install -r requirements.txt
 ```
 
+---
+
+## Google Cloud authentication
+
+Authenticate both the CLI and Application Default Credentials (ADC):
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project <YOUR_GCP_PROJECT_ID>
+```
+
+The notebooks use ADC to access Google Cloud Storage and BigQuery.
+
+---
+
 ## Configuration parameters
 
-The notebooks expose the main environment- and analysis-dependent settings near the top of the file.
+The notebooks are designed to use a small number of configurable parameters defined near the top of each notebook.
 
-Examples include:
+Typical parameters include:
 
 - `PROJECT_ID`
 - `BASE_DATASET_ID`
@@ -185,18 +147,120 @@ Examples include:
 - `MIN_ACTIVE_WEEKS`
 - `LOCAL_PRICE_QUANTILE_RESOLUTION`
 - `LOCAL_PRICE_QUANTILE_OFFSET`
-- `PENALTY_GRID`
-- `SELECTED_PENALTY`
-- `CP_MERGE_TOL_DAYS`
-- clustering and factor-estimation parameters such as `BEST_K`, `WINSOR_P`, `HAC_LAGS`, and `MIN_OBS`
 
-Adjust these values before running the notebooks in your own environment.
+Replace placeholders such as:
+
+- `<YOUR_GCP_PROJECT_ID>`
+- `<YOUR_BASE_BIGQUERY_DATASET>`
+- `<YOUR_ANALYTICS_BIGQUERY_DATASET>`
+- `<YOUR_GCS_BUCKET>`
+
+with values appropriate for your environment.
+
+For example, in one environment the tables were stored under:
+
+- project: `nftpricing`
+- base dataset: `base`
+- analytics dataset: `analytics`
+
+but these names are intentionally parameterized in the public workflow.
+
+---
+
+## Notebook overview
+
+The notebooks are organized by stage of the workflow.
+
+### `notebooks/data_preparation.ipynb`
+
+Builds the base analysis tables from the public Zenodo dataset and ETH/USD reference data.
+
+Main outputs:
+
+- `usd_eth_raw`
+- `usd_eth_base`
+- `nft_trading_usd`
+- `nft_trading_usd_prefilter`
+- `nft_trading_usd_filtered`
+
+### `notebooks/regime_detection.ipynb`
+
+Builds weekly market series, evaluates changepoint sensitivity, and creates regime labels.
+
+Main output:
+
+- `regime_labels`
+
+### `notebooks/factor_model_preparation.ipynb`
+
+Builds the collection-week panel and weekly return inputs required for factor estimation.
+
+Main outputs:
+
+- `weekly_collection_panel_filtered`
+- `weekly_returns_vw`
+
+### `notebooks/factor_model_estimation.ipynb`
+
+Estimates full-period and regime-wise two-factor model parameters.
+
+Main outputs:
+
+- `beta_alpha_estimates`
+- `beta_alpha_estimates_by_regime`
+
+### `notebooks/clustering_preparation.ipynb`
+
+Builds the collection-level structural feature table for clustering.
+
+Main output:
+
+- `clustering_master`
+
+### `notebooks/clustering_modeling.ipynb`
+
+Evaluates candidate values of `k`, fits the clustering model, and saves cluster assignments.
+
+Main output:
+
+- `clustering_result`
+
+### `notebooks/cross_model_evaluation.ipynb`
+
+Compares category labels, clustering labels, and factor-model estimates using grouped summaries and nonparametric tests.
+
+This notebook is intended for screen-readable output rather than manuscript-oriented LaTeX export.
+
+---
+
+## Recommended execution order
+
+Run the notebooks in the following order:
+
+1. `notebooks/data_preparation.ipynb`
+2. `notebooks/regime_detection.ipynb`
+3. `notebooks/factor_model_preparation.ipynb`
+4. `notebooks/factor_model_estimation.ipynb`
+5. `notebooks/clustering_preparation.ipynb`
+6. `notebooks/clustering_modeling.ipynb`
+7. `notebooks/cross_model_evaluation.ipynb`
+
+Later notebooks assume that the BigQuery tables created by earlier notebooks already exist.
+
+---
 
 ## Data preparation workflow
 
-### 1. Download the public dataset from Zenodo
+### Step 1. Download the public files
 
-Suggested local directory layout:
+Download the Zenodo source files manually or via browser:
+
+- `nft_trading_base.tar.gz`
+- `nft_metadata_base.parquet.gz`
+
+Download ETH/USD reference data from Etherscan as CSV.
+
+Expected local layout:
 
 ```text
 data/
@@ -208,16 +272,18 @@ data/
     └── nft_trading_base/
 ```
 
+### Step 2. Extract the trade archive
+
 Example:
 
 ```bash
-mkdir -p data/raw data/extracted
-curl -L -o data/raw/nft_trading_base.tar.gz "https://zenodo.org/records/19111864/files/nft_trading_base.tar.gz?download=1"
-curl -L -o data/raw/nft_metadata_base.parquet.gz "https://zenodo.org/records/19111864/files/nft_metadata_base.parquet.gz?download=1"
-tar -xzf data/raw/nft_trading_base.tar.gz -C data/extracted/
+mkdir -p data/extracted
+tar -xzf data/raw/nft_trading_base.tar.gz -C data/extracted
 ```
 
-### 2. Upload source files to GCS
+### Step 3. Upload local files to GCS
+
+Example using `gcloud storage cp`:
 
 ```bash
 gcloud storage cp data/raw/nft_metadata_base.parquet.gz gs://<YOUR_GCS_BUCKET>/nft_market_regimes/raw/
@@ -225,92 +291,208 @@ gcloud storage cp data/raw/etherprice.csv gs://<YOUR_GCS_BUCKET>/nft_market_regi
 gcloud storage cp --recursive data/extracted/nft_trading_base gs://<YOUR_GCS_BUCKET>/nft_market_regimes/raw/nft_trading_base/
 ```
 
-### 3. Load BigQuery base tables
+The notebook also includes Python-based upload helpers using `google-cloud-storage`.
 
-The target base tables are:
+### Step 4. Load raw files into BigQuery
 
-- `<YOUR_GCP_PROJECT_ID>.<YOUR_BASE_BIGQUERY_DATASET>.nft_trading_base`
-- `<YOUR_GCP_PROJECT_ID>.<YOUR_BASE_BIGQUERY_DATASET>.nft_metadata_base`
-- `<YOUR_GCP_PROJECT_ID>.<YOUR_BASE_BIGQUERY_DATASET>.usd_eth_raw`
+The notebook includes both Python and CLI-oriented patterns for loading data from GCS into BigQuery.
 
-### 4. Obtain ETH/USD daily exchange-rate data
+The ETH/USD CSV is first loaded as:
 
-The ETH/USD data used in the paper are obtained from Etherscan and should be saved locally as `data/raw/etherprice.csv`.
+- `usd_eth_raw`
 
-Load the CSV into `usd_eth_raw` first, then normalize it into `usd_eth_base` using `sql/00_create_usd_eth_base.sql` or the matching notebook section.
+and then normalized into:
 
-### 5. Create derived transaction tables
+- `usd_eth_base`
 
-After the base tables are ready, create:
+---
 
+## Main BigQuery outputs
+
+### Data preparation
+
+- `usd_eth_raw`
 - `usd_eth_base`
 - `nft_trading_usd`
 - `nft_trading_usd_prefilter`
 - `nft_trading_usd_filtered`
 
-Reusable SQL is provided under `sql/`.
+### Regime detection
 
-## Regime detection workflow
+- `regime_labels`
 
-The `notebooks/regime_detection.ipynb` notebook reproduces the changepoint-based regime detection workflow.
+### Factor model
 
-It performs the following steps:
+- `weekly_collection_panel_filtered`
+- `weekly_returns_vw`
+- `beta_alpha_estimates`
+- `beta_alpha_estimates_by_regime`
 
-1. load weekly series for wallets, collections, market volume, median market price, and ETH/USD,
-2. standardize the series using `log1p`,
-3. run a penalty sensitivity check,
-4. generate changepoints with the selected penalty,
-5. identify the study-specific `boom_start` and `post_start` boundaries,
-6. create `<YOUR_GCP_PROJECT_ID>.<YOUR_ANALYTICS_BIGQUERY_DATASET>.regime_labels`.
+### Clustering
 
-The selected penalty in the current notebook template is `6`, consistent with the supplied workflow.
+- `clustering_master`
+- `clustering_result`
 
-## Factor-model workflow
+The repository intentionally avoids creating unnecessary persistent intermediate tables where possible.
 
-The factor-model workflow follows a minimal public pipeline:
+---
 
-1. create `weekly_collection_panel_filtered` from `nft_trading_usd_filtered`,
-2. create `weekly_returns_vw` directly from `weekly_collection_panel_filtered` and `usd_eth_base`,
-3. join `weekly_returns_vw` with `regime_labels` at estimation time,
-4. estimate full-period and regime-wise two-factor parameters in Python using HAC-robust OLS.
+## Data preparation rules
 
-The minimal public version does **not** create a separate residual table or a separate `weekly_factor_input_vw` table.
+### `usd_eth_raw` and `usd_eth_base`
 
-## Clustering workflow
+The ETH/USD CSV downloaded from Etherscan is first loaded into `usd_eth_raw`.
+
+`usd_eth_base` is then created as a normalized table with:
+
+- `timestamp`
+- `date`
+- `week_start`
+- `usd_eth_rate`
+
+The analysis period is parameterized through notebook and SQL configuration values such as:
+
+- `ANALYSIS_START_DATE`
+- `ANALYSIS_END_DATE`
+
+### `nft_trading_usd_prefilter`
+
+The prefilter step removes extreme outliers using:
+
+- collection-level `price_usd` 99.9th percentile
+- global cap at `GLOBAL_MAX_PRICE_USD`
+
+### `nft_trading_usd_filtered`
+
+The filtered trade table retains only collections with:
+
+- at least `MIN_ACTIVE_WEEKS` active weeks
+
+---
+
+## Regime detection
+
+The regime detection workflow uses weekly series derived from:
+
+- unique traders
+- unique collections
+- market volume
+- median market price
+- ETH/USD rate
+
+Changepoints are detected using `ruptures` with a penalty parameter. Sensitivity checks are performed over a small penalty grid, while the default regime labeling step uses the selected baseline penalty configured in the notebook.
+
+The regime labeling step creates:
+
+- `regime_labels`
+
+The current implementation follows the paper-aligned boundary-selection rule:
+
+- `boom_start`: first global changepoint in 2021
+- `post_start`: first global changepoint in 2022
+
+This rule is made explicit in the notebook for transparency.
+
+---
+
+## Factor model
+
+### Factor-model inputs
+
+The two-factor model uses:
+
+- collection-level NFT returns from `weekly_collection_panel_filtered`
+- market return derived from value-weighted collection returns
+- FX return derived from weekly ETH/USD changes
+
+The public workflow intentionally keeps the factor-model pipeline minimal.
+
+Persistent outputs are limited to:
+
+- `weekly_collection_panel_filtered`
+- `weekly_returns_vw`
+- `beta_alpha_estimates`
+- `beta_alpha_estimates_by_regime`
+
+The public workflow does **not** create:
+
+- `weekly_factor_input_vw`
+- residual tables
+
+### Estimation
+
+The notebook estimates:
+
+- full-period alpha and betas
+- regime-wise alpha and betas
+
+using a two-factor specification with:
+
+- NFT return
+- market return
+- FX return
+
+The implementation also includes:
+
+- winsorization
+- HAC standard errors
+- minimum observation thresholds
+
+---
+
+## Category labels
+
+This repository uses `nft_metadata_base.category` as the public category label source for collection-level comparisons.
+
+For category-based evaluation, collections with category labels equal to:
+
+- `unknown`
+- `vague`
+
+are excluded from the comparison step.
+
+These labels may remain in the underlying base tables, but they are not used in category-level summary statistics or statistical tests.
+
+---
+
+## Clustering pipeline
 
 The clustering workflow produces two main outputs:
 
-- `clustering_master`: collection-level structural feature table
-- `clustering_result`: final clustering labels and centroid distances
-
-### Input tables
-
-The clustering pipeline uses the following public tables:
-
-- `nft_trading_usd_filtered`
-- `nft_metadata_base`
-- `regime_labels`
-- category label table, if available
+- `clustering_master`
+- `clustering_result`
 
 ### `clustering_master`
 
-`clustering_master` is built as a single BigQuery table using CTEs rather than multiple persistent intermediate tables. It integrates:
+`clustering_master` is built as a single BigQuery table using SQL CTEs rather than multiple persistent intermediate tables.
 
-- holder concentration and holder-distribution features,
-- trading activity and price-distribution features,
-- metadata-derived structural features,
-- optional category labels for interpretation.
+It integrates collection-level structural features from:
+
+- trade activity
+- holder concentration and distribution
+- metadata-derived structural attributes
+- regime-aligned first-trade information
+- category label from `nft_metadata_base.category`
+
+The public clustering pipeline intentionally avoids creating separate persistent tables such as:
+
+- `holder_metrics_full`
+- `trading_stats`
+- `metadata_stats`
+
+Instead, equivalent logic is embedded inside the `clustering_master` build step.
 
 ### `clustering_result`
 
-`clustering_result` is generated in the notebook after:
+`clustering_result` is produced in the notebook after:
 
-1. loading `clustering_master`,
-2. applying optional log transformation and winsorization,
-3. scaling the selected features,
-4. evaluating candidate values of `k`,
-5. fitting KMeans with the selected number of clusters,
-6. saving cluster labels and centroid distances.
+1. loading `clustering_master`
+2. selecting the clustering feature set
+3. applying optional log transformation
+4. applying winsorization
+5. scaling the features
+6. evaluating candidate values of `k`
+7. fitting KMeans with the selected number of clusters
 
 The saved output includes:
 
@@ -318,30 +500,75 @@ The saved output includes:
 - `cluster`
 - `distance_to_centroid`
 
-## Target tables
+The public workflow does not use:
 
-### Base and prepared tables
+- suspicious-filtered clustering variants
+- extra metadata tables beyond `nft_metadata_base`
+- LaTeX table export for clustering summaries
 
-- `nft_trading_base`
-- `nft_metadata_base`
-- `usd_eth_raw`
-- `usd_eth_base`
-- `nft_trading_usd`
-- `nft_trading_usd_prefilter`
-- `nft_trading_usd_filtered`
+---
 
-### Analytics tables
+## Cross-model evaluation
 
-- `regime_labels`
-- `weekly_collection_panel_filtered`
-- `weekly_returns_vw`
-- `beta_alpha_estimates`
-- `beta_alpha_estimates_by_regime`
-- `clustering_master`
-- `clustering_result`
+The final comparison stage integrates three kinds of outputs:
 
-## Notes
+- category labels from `nft_metadata_base.category`
+- clustering labels from `clustering_result`
+- factor-model estimates from `beta_alpha_estimates` and `beta_alpha_estimates_by_regime`
 
-- The notebooks assume that `nft_trading_base.timestamp` is a timestamp column with time information and that the ETH/USD file is daily. The join therefore uses `DATE(timestamp)`.
-- If your uploaded `nft_metadata_base` object remains gzip-compressed in GCS, decompress it locally before loading or verify that your BigQuery loading path handles the uploaded object correctly.
-- Inspect the loaded schemas in BigQuery and confirm table partitioning and clustering choices before adapting the SQL scripts for production use.
+The evaluation notebook focuses on screen-readable summaries instead of manuscript-oriented exports.
+
+Included analyses are:
+
+- category × cluster cross-tabulation
+- grouped summaries of alpha and beta estimates
+- Kruskal-Wallis tests across categories and clusters
+- unified category-vs-cluster comparison tables
+- partial R² comparisons for the FX factor across regimes
+
+The current public workflow does **not** persist additional comparison-result tables by default.
+
+---
+
+## Design principle
+
+This repository is intentionally designed as a minimal reproducible workflow.
+
+Where possible, intermediate computations are performed inside notebooks or SQL CTEs rather than materialized as separate persistent tables. This keeps the public pipeline easier to understand and reduces the number of required artifacts for reproduction.
+
+---
+
+## Reproducibility note
+
+All table names, project identifiers, dataset names, and storage locations are parameterized with placeholders where appropriate. Replace these placeholders with your own Google Cloud project, BigQuery dataset, and Cloud Storage bucket names before execution.
+
+The notebooks assume that earlier pipeline stages have already created the prerequisite tables in BigQuery.
+
+---
+
+## Dependencies
+
+The repository relies on a small set of scientific Python packages, including:
+
+- `pandas`
+- `numpy`
+- `pyarrow`
+- `bigframes`
+- `google-cloud-bigquery`
+- `google-cloud-storage`
+- `statsmodels`
+- `scikit-learn`
+- `scipy`
+- `ruptures`
+- `jupyter`
+- `ipykernel`
+
+Use `environment.yml` as the recommended environment definition.
+
+---
+
+## Notes on public reproducibility
+
+This repository is intended to provide a practical, minimal reproduction path from public raw data to the main analytical outputs.
+
+Some exploratory branches, publication-specific formatting scripts, and project-internal helper utilities are intentionally omitted to keep the workflow readable and reproducible from the public dataset alone.

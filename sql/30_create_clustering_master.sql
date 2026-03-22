@@ -1,7 +1,6 @@
 DECLARE PROJECT_ID STRING DEFAULT '<YOUR_GCP_PROJECT_ID>';
 DECLARE BASE_DATASET_ID STRING DEFAULT '<YOUR_BASE_BIGQUERY_DATASET>';
 DECLARE ANALYTICS_DATASET_ID STRING DEFAULT '<YOUR_ANALYTICS_BIGQUERY_DATASET>';
-DECLARE CATEGORY_TABLE_NAME STRING DEFAULT 'collection_category_labels';
 
 CREATE OR REPLACE TABLE `${PROJECT_ID}.${ANALYTICS_DATASET_ID}.clustering_master` AS
 WITH universe AS (
@@ -153,7 +152,11 @@ trading_stats AS (
       DATE_TRUNC(DATE(MAX(timestamp)), WEEK(MONDAY)) AS latest_week_start,
       DATE_DIFF(DATE(MAX(timestamp)), DATE(MIN(timestamp)), DAY) + 1 AS trading_days,
       COUNT(DISTINCT week_start) AS active_weeks,
-      DATE_DIFF(DATE_TRUNC(DATE(MAX(timestamp)), WEEK(MONDAY)), DATE_TRUNC(DATE(MIN(timestamp)), WEEK(MONDAY)), WEEK) + 1 AS trading_week_span,
+      DATE_DIFF(
+        DATE_TRUNC(DATE(MAX(timestamp)), WEEK(MONDAY)),
+        DATE_TRUNC(DATE(MIN(timestamp)), WEEK(MONDAY)),
+        WEEK
+      ) + 1 AS trading_week_span,
       COUNT(*) AS trades,
       SAFE_DIVIDE(COUNT(*), DATE_DIFF(DATE(MAX(timestamp)), DATE(MIN(timestamp)), DAY) + 1) AS daily_trades,
       COUNT(DISTINCT token_id) AS unique_items,
@@ -166,12 +169,16 @@ trading_stats AS (
       STDDEV(price_usd) AS stddev_price,
       MIN(price_usd) AS min_price,
       MAX(price_usd) AS max_price,
-      ((ARRAY_AGG(STRUCT(timestamp, price_usd) ORDER BY timestamp DESC LIMIT 1))[OFFSET(0)].price_usd -
-       (ARRAY_AGG(STRUCT(timestamp, price_usd) ORDER BY timestamp ASC LIMIT 1))[OFFSET(0)].price_usd) AS diff_price
+      (
+        (ARRAY_AGG(STRUCT(timestamp, price_usd) ORDER BY timestamp DESC LIMIT 1))[OFFSET(0)].price_usd -
+        (ARRAY_AGG(STRUCT(timestamp, price_usd) ORDER BY timestamp ASC LIMIT 1))[OFFSET(0)].price_usd
+      ) AS diff_price
     FROM `${PROJECT_ID}.${BASE_DATASET_ID}.nft_trading_usd_filtered`
     GROUP BY collection
   )
-  SELECT b.*, r.regime_class AS first_trade_regime
+  SELECT
+    b.*,
+    r.regime_class AS first_trade_regime
   FROM base b
   LEFT JOIN `${PROJECT_ID}.${ANALYTICS_DATASET_ID}.regime_labels` r
     ON b.first_week_start = r.week_start
@@ -179,6 +186,7 @@ trading_stats AS (
 metadata_stats AS (
   SELECT
     collection,
+    category,
     CASE WHEN description IS NULL OR description = '' THEN 0 ELSE 1 END AS has_description,
     description_size AS description_length,
     CASE WHEN image_url IS NULL OR image_url = '' THEN 0 ELSE 1 END AS has_image,
@@ -192,10 +200,6 @@ metadata_stats AS (
     CASE WHEN erc2981_supported = 1 THEN 1 ELSE 0 END AS has_erc2981,
     royalty_fee_percent
   FROM `${PROJECT_ID}.${BASE_DATASET_ID}.nft_metadata_base`
-),
-category_labels AS (
-  SELECT collection, final_category AS category
-  FROM `${PROJECT_ID}.${ANALYTICS_DATASET_ID}.${CATEGORY_TABLE_NAME}`
 )
 SELECT
   u.collection,
@@ -229,6 +233,7 @@ SELECT
   t.min_price,
   t.max_price,
   t.diff_price,
+  m.category,
   m.has_description,
   m.description_length,
   m.has_image,
@@ -240,10 +245,8 @@ SELECT
   m.is_erc721,
   m.is_erc1155,
   m.has_erc2981,
-  m.royalty_fee_percent,
-  c.category
+  m.royalty_fee_percent
 FROM universe u
 LEFT JOIN holder_stats h USING (collection)
 LEFT JOIN trading_stats t USING (collection)
-LEFT JOIN metadata_stats m USING (collection)
-LEFT JOIN category_labels c USING (collection);
+LEFT JOIN metadata_stats m USING (collection);
