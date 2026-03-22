@@ -1,15 +1,16 @@
--- Replace the project and dataset placeholders before execution.
-DECLARE project_id STRING DEFAULT '<YOUR_GCP_PROJECT_ID>';
-DECLARE dataset_id STRING DEFAULT '<YOUR_BIGQUERY_DATASET>';
+-- Create the USD-enriched transaction table.
+
+DECLARE PROJECT_ID STRING DEFAULT '<YOUR_GCP_PROJECT_ID>';
+DECLARE DATASET_ID STRING DEFAULT '<YOUR_BIGQUERY_DATASET>';
 
 EXECUTE IMMEDIATE FORMAT("""
 CREATE OR REPLACE TABLE `%s.%s.nft_trading_usd` AS
 SELECT
   t.*,
-  fx.usd_eth_rate,
-  t.price_eth * fx.usd_eth_rate AS price_usd,
-  t.fee_eth * fx.usd_eth_rate AS fee_usd
+  e.usd_eth_rate AS eth_usd_rate,
+  SAFE_MULTIPLY(t.price_eth, e.usd_eth_rate) AS price_usd,
+  SAFE_MULTIPLY(t.fee_eth, e.usd_eth_rate) AS fee_usd
 FROM `%s.%s.nft_trading_base` AS t
-LEFT JOIN `%s.%s.usd_eth_base` AS fx
-  ON DATE(t.timestamp) = fx.date
-""", project_id, dataset_id, project_id, dataset_id, project_id, dataset_id);
+LEFT JOIN `%s.%s.usd_eth_base` AS e
+  ON DATE(t.timestamp) = e.date
+""", PROJECT_ID, DATASET_ID, PROJECT_ID, DATASET_ID, PROJECT_ID, DATASET_ID);
